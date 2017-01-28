@@ -144,20 +144,22 @@ boolean BNOInit()
   BNOWriteRegister(PAGE_ID_REG, 0);
   BNOWriteRegister(SYS_TRIGGER_REG, 0x00);           // reset
   delay(10);
-//  SetBNO055Mode(OP_MODE_NDOF);
+  //  SetBNO055Mode(OP_MODE_NDOF);
   delay(20);
   return true;
 }
 
 void SetBNO055Mode(uint8_t mode)
 {
-    BNOWriteRegister(OPR_MODE_REG, OP_MODE_CONFIG);      // set config mode
-  delay(100);
+  BNOWriteRegister(OPR_MODE_REG, OP_MODE_CONFIG);      // set config mode
+  delay(100);                                         // wait for BNO
   BNOWriteRegister(OPR_MODE_REG, mode);      // set  mode
+  delay(100);                               // wait for BNO
   // WriteRegister(BNO055_Address, Adafruit_BNO055::BNO055_OPR_MODE_ADDR, mode);
+  pendingInitRelativeHeading = true;
   Serial.print("new mode:0x");
   Serial.println(BNOreadRegister(OPR_MODE_REG), HEX );
-  delay(30);
+//  delay(30);
 
 }
 
