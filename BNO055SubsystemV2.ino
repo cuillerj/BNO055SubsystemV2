@@ -529,7 +529,7 @@ void loop() {
     //  uint16_t deltaLeftPosY = (uint16_t)LOCAL_CTRL_REG[deltaLeftPosY_reg1] << 8 | (uint16_t) LOCAL_CTRL_REG[deltaLeftPosY_reg2];
     //   uint16_t deltaRightPosX = (uint16_t)LOCAL_CTRL_REG[deltaRightPosX_reg1] << 8 | (uint16_t) LOCAL_CTRL_REG[deltaRightPosX_reg2];
     //  uint16_t deltaRightPosY = (uint16_t)LOCAL_CTRL_REG[deltaRightPosY_reg1] << 8 | (uint16_t) LOCAL_CTRL_REG[deltaRightPosY_reg2];
-    locationHeadingRad = ((int)(360 - RobotRotationClockWise * locationHeading) % 360) * PI / 180;   // convert & adjust rotation sens
+    locationHeadingRad = ((360 - RobotRotationClockWise * locationHeading) % 360) * PI / 180;   // convert & adjust rotation sens
     int forward=1;
     if (LOCAL_CTRL_REG[forwardBackward_reg]==0x00)
     {
