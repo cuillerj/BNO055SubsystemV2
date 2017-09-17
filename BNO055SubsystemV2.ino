@@ -1,4 +1,9 @@
 /*
+   release notes
+   16/09/2017 RobotOutputRobotRequestPin temporarly used as output during the reboot to ask if necessary to the rebot to move calibrate compass
+*/
+
+/*
    I2C communication as master
    one connection with BNO055
    one connection with robot (robot can be polled with timer or can request token with InputRobotRequestPin
@@ -121,6 +126,17 @@ void setup() {
   pinMode(pin1OpMode, INPUT);
   pinMode(pin2OpMode, INPUT);
   digitalWrite(systemLED, 1);
+  pinMode(SensorInputRobotRequestPin, INPUT);
+  pinMode(SensorOutputReadyPin, OUTPUT);
+  digitalWrite(SensorOutputReadyPin, LOW);
+  Serial.println("wait for robot to be ready");
+  while (digitalRead(SensorInputRobotRequestPin) == LOW)
+  {
+    delay(10);
+  }
+  Serial.println("robot is ready ");
+  pinMode(SensorInputRobotRequestPin, OUTPUT);
+  digitalWrite(SensorInputRobotRequestPin, LOW);
   InitSubsystemParameters(true, 0, 0);
   //  LOCAL_CTRL_REG[selectedRange_Reg] = 0x01;         // default selected range
   int eeAddress = 0;
@@ -202,6 +218,7 @@ void setup() {
   if (foundCalib  && digitalRead(pin1OpMode) == 0 && digitalRead(pin2OpMode) == 0) {
     Serial.println("Move sensor slightly to calibrate magnetometers");
     unsigned int count = 0;
+
     while (BNOreadRegister(CALIB_STAT_REG) != 0xff && count < 60)
     {
 #if defined(debugOn)
@@ -210,9 +227,13 @@ void setup() {
 #endif
       UpdateBNOStatus();
       UpdateLEDStatus();
+      digitalWrite(SensorInputRobotRequestPin, HIGH);
+      delay(10);
+      digitalWrite(SensorInputRobotRequestPin, LOW);
       delay(1000);
       count++;
     }
+    pinMode(SensorInputRobotRequestPin, INPUT);
     Serial.println("end calibration");
   }
   UpdateBNOStatus();
@@ -227,7 +248,6 @@ void setup() {
   //  WriteRegister(BNO055_Address, 0x10, 0b01000000);
   delay(20);
   Serial.println("BNO055 is started");
-  pinMode(SensorOutputReadyPin, OUTPUT);
 #if defined(BNO055PinInterrupt)
   pinMode(BNO055PinInterrupt, INPUT);
   attachInterrupt(BNO055PinInterrupt, Robot_BNO055DataReady, RISING);
@@ -530,10 +550,10 @@ void loop() {
     //   uint16_t deltaRightPosX = (uint16_t)LOCAL_CTRL_REG[deltaRightPosX_reg1] << 8 | (uint16_t) LOCAL_CTRL_REG[deltaRightPosX_reg2];
     //  uint16_t deltaRightPosY = (uint16_t)LOCAL_CTRL_REG[deltaRightPosY_reg1] << 8 | (uint16_t) LOCAL_CTRL_REG[deltaRightPosY_reg2];
     locationHeadingRad = ((360 - RobotRotationClockWise * locationHeading) % 360) * PI / 180;   // convert & adjust rotation sens
-    int forward=1;
-    if (LOCAL_CTRL_REG[forwardBackward_reg]==0x00)
+    int forward = 1;
+    if (LOCAL_CTRL_REG[forwardBackward_reg] == 0x00)
     {
-      forward=-1;
+      forward = -1;
     }
     fDeltaLeftPosX = fDeltaLeftPosX + ((float)(LOCAL_CTRL_REG[leftDistance_Reg])) * forward * cos(RobotRotationClockWise * locationHeadingRad );
     fDeltaLeftPosY = fDeltaLeftPosY + ((float)(LOCAL_CTRL_REG[leftDistance_Reg])) * forward * sin(RobotRotationClockWise * locationHeadingRad );
