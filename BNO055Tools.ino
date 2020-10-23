@@ -95,6 +95,7 @@ uint8_t BNOreadRegister( uint8_t regAddress) {
     // waiting
   }
   v = Wire.read();
+
   return v;
 }
 
@@ -108,6 +109,7 @@ boolean BNOreadLenRegister(uint8_t regAddress, byte * buff, uint8_t len)
   {
     buff[i] = Wire.read();
   }
+
   return true;
 }
 

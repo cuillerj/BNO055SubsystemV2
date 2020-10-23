@@ -1,6 +1,9 @@
 /*
+   26/09/2020 delay added between write and request
+*/
+/*
    release notes
-   16/09/2017 RobotOutputRobotRequestPin temporarly used as output during the reboot to ask if necessary to the rebot to move calibrate compass
+   16/09/2017 RobotOutputRobotRequestPin temporarly used as output during the reboot to ask if necessary to the robot to move calibrate compass
 */
 
 /*
@@ -23,10 +26,11 @@
 /* PINs configuration define the starting mode
     (PIN 1,PIN 2)=> (0,0) = NDOF / (1,1) = IMU / (1,0) = Compas / / (0,1) = Config
 */
-//#define debugOn
-//#define debugL2On
-//#define debugL3On
+#define debugOn
+#define debugL2On
+#define debugL3On
 //#define debugLEDOn
+//#define debugPIN
 #include <Wire.h>
 
 #include <BNO055SubsystemCommonDefine.h>
@@ -116,6 +120,7 @@ typedef enum
   vector_GRAVITY       = 0x2e
 } vector_type_t;
 
+volatile boolean gotWord = false;
 //Adafruit_BNO055::adafruit_bno055_reg_t regDef;
 void setup() {
   // Wire.begin();
@@ -269,7 +274,9 @@ void setup() {
 
 void loop() {
   delayMicroseconds(1);
-
+#if defined(debugPIN)
+  Serial.println(digitalRead(SensorInputRobotRequestPin));
+#endif
   if ((millis() - prevBNO055Timer) >= LOCAL_CTRL_REG[BNO055cycleDuration_Reg] && monitGyro == true ) //LOCAL_CTRL_REG[cycleDuration_Reg]
   {
     dataToRead = false;
@@ -408,14 +415,21 @@ void loop() {
     //   imu::Vector<3> absoluteOrientation = bno.getVector(Adafruit_BNO055::VECTOR_MAGNETOMETER);
     //Serial.println(absoluteOrientation.y());
   }
+  if ( (digitalRead(SensorInputRobotRequestPin) == LOW)) {
+    gotWord = false;
+  }
 
-  if ( (digitalRead(SensorInputRobotRequestPin) == HIGH) )
+  if ( (digitalRead(SensorInputRobotRequestPin) == HIGH) && !gotWord )
     /*
        The robot ask for the word
     */
+
   {
+
     int dataLen = Robot_PollSlave(LOCAL_CTRL_REG[robotAddress_Reg], currentStatus);  // request data from robot
+    gotWord = true;
     uint8_t receiveAddress = dataIn[0];
+    Serial.println(receiveAddress,HEX);
     if (receiveAddress == LOCAL_CTRL_REG[robotAddress_Reg])                     // check data is comming from robot
     {
       uint8_t cmd = dataIn[1];                                                  // this byte is a command switch
@@ -519,7 +533,8 @@ void loop() {
           }
         case setBNO055Mode:
           {
-            //           digitalWrite(MagnetoPowerPin, HIGH);
+            Serial.print("set nmode:0x");
+            Serial.print(dataIn[2], HEX);
             SetBNO055Mode(dataIn[2]);
             break;
           }
@@ -625,6 +640,7 @@ void Robot_SendRegistersValue(uint8_t deviceAddress,  uint8_t numberRegs, uint8_
     Wire.write(LOCAL_CTRL_REG[dataIn[i + 3]]);            // sends one byte
   }
   Wire.endTransmission();    // stop transmitting
+  delay(5);
 }
 int Robot_PollSlave(int deviceAddress, byte parameter) {
 
@@ -637,6 +653,7 @@ int Robot_PollSlave(int deviceAddress, byte parameter) {
   Wire.write(parameter);
   Wire.write(pollResponseExpectedLenght);                   // Command Data = dummy zeroes
   Wire.endTransmission();
+  delay(5);
   Wire.requestFrom(deviceAddress, pollResponseExpectedLenght); // read a byte
   while (Wire.available()) {
     dataIn[idx] = Wire.read();
@@ -644,7 +661,9 @@ int Robot_PollSlave(int deviceAddress, byte parameter) {
   }
 #if defined(debugL3On)
   Serial.print("request from robot:" );
-  Serial.println(deviceAddress, HEX);
+  Serial.print(deviceAddress, HEX);
+  Serial.print(" w:");
+  Serial.println(gotWord);
   //  Serial.println(float(interruptCount * 1000 / (millis() - startInterruptTime)));
 #endif
   return idx;
@@ -727,6 +746,7 @@ void Robot_CalibrateGyro(uint8_t deviceAddress)
   Wire.write(deviceAddress);
   Wire.write(calibrateGyro);
   Wire.endTransmission();    // stop transmitting
+  delay(5);
 }
 
 void InitLocation()
@@ -882,4 +902,3 @@ void UpdateLEDStatus()
 
   UpdateLEDStatus_time = millis();
 }
-
